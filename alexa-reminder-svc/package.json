@@ -1,0 +1,16 @@
+{
+  "name": "alexa-reminder-svc",
+  "version": "1.0.0",
+  "description": "Alexa reminder microservice for n8n Google Calendar integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "alexa-remote2": "8.0.4",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

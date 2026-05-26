@@ -1,0 +1,41 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=${TZ}
+      - TZ=${TZ}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # Available in n8n expressions as {{ $env.HOME_ADDRESS }} etc.
+      - HOME_ADDRESS=${HOME_ADDRESS}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - n8n-net
+
+  alexa-reminder-svc:
+    build: ./alexa-reminder-svc
+    restart: unless-stopped
+    ports:
+      - "3001:3001"  # Proxy port for one-time Alexa auth setup — can be removed after first login
+    environment:
+      - ALEXA_DEVICE_NAME=${ALEXA_DEVICE_NAME}
+      - ALEXA_PROFILE_NAME=${ALEXA_PROFILE_NAME}
+      - TZ=${TZ}
+    volumes:
+      - alexa_auth_data:/data  # Persists Alexa auth tokens across restarts
+    networks:
+      - n8n-net
+
+networks:
+  n8n-net:
+    driver: bridge
+
+volumes:
+  n8n_data:
+    external: true  # Reuses your existing n8n_data volume (preserves workflows/credentials)
+  alexa_auth_data:  # Stores Alexa auth tokens between container restarts

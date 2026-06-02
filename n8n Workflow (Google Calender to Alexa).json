@@ -1,0 +1,361 @@
+{
+  "name": "Google Calender to Alexa",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "calendarId": {
+          "__rl": true,
+          "value": "koorzenb@gmail.com",
+          "mode": "list",
+          "cachedResultName": "koorzenb@gmail.com"
+        },
+        "triggerOn": "eventCreated",
+        "options": {
+          "matchTerm": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "f6a01212-1531-48c8-8d10-b4907e5d879c",
+      "name": "Google Calendar Trigger",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "s5UtiiqFxngz9cMM",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "69382338-793c-4d0e-80e0-666c0c451a09",
+              "leftValue": "=  {{ $json.start.dateTime }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f5e7ac25-46c8-4dc3-a44d-d167edcf7fda",
+      "name": "Skip All-Day Events"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "660c776d-0774-4322-8197-2c3863a73f25",
+              "leftValue": "={{ $json.location }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "eb43ebc5-c9fd-4847-8d39-94d083e1c39e",
+      "name": "Has location"
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/distancematrix/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "origins",
+              "value": "={{ $env.HOME_ADDRESS }}"
+            },
+            {
+              "name": "destinations",
+              "value": "={{ $json.location }}"
+            },
+            {
+              "name": "mode",
+              "value": "driving"
+            },
+            {
+              "name": "key",
+              "value": "={{ $env.GOOGLE_MAPS_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        -192
+      ],
+      "id": "ee1f07a0-13e3-49b2-b7d5-c64e2abf25a4",
+      "name": "Get Travel Time"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://alexa-reminder-svc:3000/reminder",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "scheduledTime",
+              "value": "={{ $json.scheduledTime }}"
+            },
+            {
+              "name": "timeZone",
+              "value": "={{ $json.timeZone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        -192
+      ],
+      "id": "9ee0d23c-eb34-40a5-b0de-decb915021ed",
+      "name": "Create Alexa Reminder (with travel time)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://alexa-reminder-svc:3000/reminder",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $json.title }}"
+            },
+            {
+              "name": "scheduledTime",
+              "value": "={{ $json.scheduledTime }}"
+            },
+            {
+              "name": "timeZone",
+              "value": "={{ $json.timeZone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "44295e9a-c27d-42d3-8895-3d2649ebdf5a",
+      "name": "Create Alexa Reminder (no travel time)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const travelSeconds = $input.first().json.rows[0].elements[0].duration.value;\nconst travelMinutes = Math.ceil(travelSeconds / 60);\n\nconst event = $('Google Calendar Trigger').first().json;\nconst eventStart = new Date(event.start.dateTime);\nconst title = event.summary || 'Event';\n\nconst reminderTime = new Date(eventStart.getTime() - (travelMinutes + 5) * 60 * 1000);\n\nreturn [{\n  json: {\n    title: `Time to leave for ${title}`,\n    scheduledTime: reminderTime.toISOString(),\n    timeZone: 'America/Halifax'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -192
+      ],
+      "id": "27bf7d62-f197-44e8-857c-affb0ce25b8f",
+      "name": "Calculate Reminder (Travels)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $input.first().json;\nconst eventStart = new Date(event.start.dateTime);\nconst title = event.summary || 'Event';\n\nconst reminderTime = new Date(eventStart.getTime() - 5 * 60 * 1000);\n\nreturn [{\n  json: {\n    title: `${title}`,\n    scheduledTime: reminderTime.toISOString(),\n    timeZone: 'America/Halifax'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "ccfff5ac-a159-453a-b538-4e859d33da19",
+      "name": "Calculate Reminder (No Travels)"
+    }
+  ],
+  "pinData": {
+    "Google Calendar Trigger": [
+      {
+        "json": {
+          "kind": "calendar#event",
+          "etag": "\"2658277072000000\"",
+          "id": "_60q30c1g60o30e1i60o4ac1g60rj8gpl88rj2c1h84s34h9g60s30c1g60o30c1g6go44c2564r44da58l0k6gpg64o30c1g60o30c1g60o30c1g60o32c1g60o30c1g6orjee9i6ks48dhm8d132c1k690k8d9h60p3ec1o6gs3ihi268qg",
+          "status": "confirmed",
+          "htmlLink": "https://www.google.com/calendar/event?eid=XzYwcTMwYzFnNjBvMzBlMWk2MG80YWMxZzYwcmo4Z3BsODhyajJjMWg4NHMzNGg5ZzYwczMwYzFnNjBvMzBjMWc2Z280NGMyNTY0cjQ0ZGE1OGwwazZncGc2NG8zMGMxZzYwbzMwYzFnNjBvMzBjMWc2MG8zMmMxZzYwbzMwYzFnNm9yamVlOWk2a3M0OGRobThkMTMyYzFrNjkwazhkOWg2MHAzZWMxbzZnczNpaGkyNjhxZyBrb29yemVuYkBt",
+          "created": "2012-02-13T12:48:38.000Z",
+          "updated": "2012-02-13T13:08:56.000Z",
+          "summary": "Testing Outlook",
+          "creator": {
+            "email": "koorzenb@gmail.com",
+            "self": true
+          },
+          "organizer": {
+            "email": "koorzenb@gmail.com",
+            "self": true
+          },
+          "start": {
+            "dateTime": "2012-02-13T09:30:00-04:00"
+          },
+          "end": {
+            "dateTime": "2012-02-13T10:00:00-04:00"
+          },
+          "location": "Apartment 3 Espresso Bar, 833 Sackville Dr unit 104, Lower Sackville, NS B4E 1S1, Canada",
+          "iCalUID": "040000008200E00074C5B7101A82E0080000000040B0E16B5EEACC010000000000000000100000006779258D66CB1042AD5102708489FB25",
+          "sequence": 0,
+          "reminders": {
+            "useDefault": true
+          },
+          "eventType": "default"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Google Calendar Trigger": {
+      "main": [
+        [
+          {
+            "node": "Skip All-Day Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip All-Day Events": {
+      "main": [
+        [
+          {
+            "node": "Has location",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Has location": {
+      "main": [
+        [
+          {
+            "node": "Get Travel Time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculate Reminder (No Travels)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Travel Time": {
+      "main": [
+        [
+          {
+            "node": "Calculate Reminder (Travels)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Reminder (Travels)": {
+      "main": [
+        [
+          {
+            "node": "Create Alexa Reminder (with travel time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Reminder (No Travels)": {
+      "main": [
+        [
+          {
+            "node": "Create Alexa Reminder (no travel time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "f4daba5f-e52d-4894-92b3-a431a449da60",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2fe00102310684ce14a7214cbe2f602d26922c603c6f8fd0454ea1ef45092e92"
+  },
+  "id": "IuSl1z7tRtbTuoh3",
+  "tags": []
+}

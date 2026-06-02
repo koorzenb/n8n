@@ -276,6 +276,18 @@ docker compose logs -f alexa-reminder-svc
 
 ---
 
+## Workflow Backup
+
+The n8n workflow is stored in the `n8n_data` Docker volume and persists across restarts. To also back it up to source control:
+
+1. Open the workflow in n8n
+2. Click the **⋮ menu** (top right of the canvas) → **Download**
+3. Save the exported `.json` file to this repository folder and commit it to GitHub
+
+> The `n8n_data` volume is declared as `external: true` in `docker-compose.yml`, so it is never automatically deleted — even by `docker compose down -v`.
+
+---
+
 ## Re-Authentication
 
 If Alexa auth expires, delete the saved auth and repeat Step 5:

@@ -97,9 +97,7 @@ function resolveProfileCustomerId() {
       return;
     }
     const members = result.accounts || result.members || result.householdMembers || [];
-    const match = members.find(
-      (m) => (m.fullName || m.firstName || m.name || '').toLowerCase() === PROFILE_NAME.toLowerCase()
-    );
+    const match = members.find((m) => (m.fullName || m.firstName || m.name || '').toLowerCase() === PROFILE_NAME.toLowerCase());
     if (match) {
       profileCustomerId = match.id || match.customerId || match.directedId;
       console.log(`Resolved profile "${PROFILE_NAME}" to customerId: ${profileCustomerId}`);

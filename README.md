@@ -207,7 +207,7 @@ const reminderTime = new Date(eventStart.getTime() - (travelMinutes + 5) * 60 * 
 return [
   {
     json: {
-      title: `Time to leave for ${title}`,
+      title: `Leave for ${title}`,
       scheduledTime: reminderTime.toISOString(),
       timeZone: 'America/Halifax',
     },
@@ -286,6 +286,31 @@ docker compose restart alexa-reminder-svc
 ```
 
 Then browse to `http://localhost:3001` and log in again.
+
+---
+
+## Troubleshooting
+
+### Google Calendar Trigger: "connection cannot be established"
+
+This usually means your Google OAuth token has expired. Fix:
+
+1. In n8n, open the **Google Calendar Trigger** node
+2. Click the **Credential** field → **Reconnect**
+3. Complete the Google sign-in flow
+4. **Save** → **Publish** the workflow
+
+**Prevent recurring expiry — Publish your Google OAuth app:**
+
+By default, Google OAuth apps in "Testing" mode issue tokens that expire after 7 days. To get long-lived tokens:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → your project
+2. Navigate to **Google Auth Platform → Audience** (or _APIs & Services → OAuth consent screen_)
+3. Under **Publishing status**, click **Publish app** → **Confirm**
+
+> You do not need to submit for verification. Publishing to Production for a personal app is safe — it only means any Google user *could* go through the OAuth flow, but they would only access their own data, not yours. Your n8n runs on localhost and is not internet-accessible.
+
+After publishing, re-authorize the credential in n8n once more. Tokens will then persist indefinitely.
 
 ---
 

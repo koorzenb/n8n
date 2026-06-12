@@ -36,7 +36,8 @@ All services run in Docker Compose on a shared internal network. The `alexa-remi
 3. Enable the **Distance Matrix API** under _APIs & Services → Library_
 4. Go to _APIs & Services → Credentials_ → **Create Credentials → API key**
 5. Edit the key:
-   - Under **Application restrictions**, set to **None** (or restrict to your server's IP)
+  - Under **Application restrictions**, set to **None** for local Docker setups (recommended)
+  - Only use **IP addresses** restriction if you have a stable public egress IP (common on cloud servers, uncommon on home internet)
    - Under **API restrictions**, restrict to **Distance Matrix API** only
 6. Copy the API key
 
@@ -302,6 +303,32 @@ Then browse to `http://localhost:3001` and log in again.
 ---
 
 ## Troubleshooting
+
+### Get Travel Time: `REQUEST_DENIED` / "This IP, site or mobile application is not authorized to use this API key"
+
+This means the Google Maps key restrictions do not match how n8n is calling the API.
+
+Because this request is made server-side from Docker, Google sees a source IP and an empty HTTP referrer. So **HTTP referrer restrictions will fail**.
+
+Fix:
+
+1. Open [Google Cloud Console](https://console.cloud.google.com) → **APIs & Services → Credentials**
+2. Edit your Maps API key used in `.env` (`GOOGLE_MAPS_API_KEY`)
+3. Under **Application restrictions**, choose one:
+  - **None** (best for local/home setups)
+  - **IP addresses** (only if you know your stable public egress IP)
+4. Under **API restrictions**, keep it restricted to **Distance Matrix API**
+5. Ensure billing is enabled on the Google Cloud project
+6. Save, then wait ~1-5 minutes for propagation
+7. Re-run the node in n8n
+
+Quick verification from your running n8n container:
+
+```bash
+docker compose exec n8n wget -qO- "https://maps.googleapis.com/maps/api/distancematrix/json?origins=Halifax&destinations=Dartmouth&mode=driving&key=PASTE_YOUR_KEY_HERE"
+```
+
+Expected: response `status` should be `OK` (not `REQUEST_DENIED`).
 
 ### Google Calendar Trigger: "connection cannot be established"
 

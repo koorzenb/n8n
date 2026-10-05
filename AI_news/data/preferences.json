@@ -1,0 +1,15 @@
+{
+  "core_interests": [
+    "Open-source LLMs & fine-tuning",
+    "Agentic workflows & orchestration",
+    "Coding assistant benchmarks",
+    "Local model optimization & quantization"
+  ],
+  "excluded_keywords": [
+    "Crypto",
+    "Venture capital rounds",
+    "NFTs",
+    "Speculative regulation"
+  ],
+  "contextual_notes": "Prefer concise, developer-focused technical breakthroughs over corporate marketing press releases."
+}

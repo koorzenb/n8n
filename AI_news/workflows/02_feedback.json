@@ -1,0 +1,157 @@
+﻿{
+  "name": "Telegram Feedback Listener",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "filePath": "/data/preferences.json",
+        "options": {
+          "encoding": "utf8"
+        }
+      },
+      "name": "Read Preferences",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prefsBinary = $input.first().binary.data;\nconst prefs = JSON.parse(prefsBinary.data);\nreturn [{ json: prefs }];"
+      },
+      "name": "Parse Preferences",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "bodyParametersJson": "{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"You are a preference extraction system. Your task is to analyze a user's natural language feedback message and return structured updates to a preferences.json file.\n\nINSTRUCTIONS:\n1. Analyze the feedback for mentions of new topics the user wants to ADD to core_interests.\n2. Identify any keywords or categories the user wants to REMOVE or ADD to excluded_keywords.\n3. Detect any changes requested regarding the user's preferred content style or tone captured in contextual_notes.\n4. Return ONLY a valid JSON object containing the fields that have CHANGED.\n5. Do NOT include any fields that remain unchanged.\n6. Do NOT include any explanatory text, preamble, or formatting outside the JSON object.\n\nCurrent preferences: {{ JSON.stringify($input.first().json) }}\n\nUser feedback: \"{{ $('Telegram Trigger').item.json.message.text }}\"\n\nReturn ONLY a JSON object with the changed fields. If nothing changed, return {}.\"\n        }\n      ]\n    }\n  ]\n}"
+      },
+      "name": "Gemini Feedback Parser",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const geminiResponse = $input.first().json;\nlet updatedPrefs = {};\n\nconst candidates = geminiResponse.candidates;\nif (candidates && candidates.length > 0) {\n  const parts = candidates[0].content.parts;\n  if (parts && parts.length > 0) {\n    const text = parts[0].text.trim();\n    try {\n      updatedPrefs = JSON.parse(text);\n    } catch (e) {\n      console.error('Failed to parse Gemini response:', text);\n      return [{ json: { error: 'Failed to parse Gemini response' } }];\n    }\n  }\n}\n\nconst currentPrefs = $(''Parse Preferences'').first().json;\nconst mergedPrefs = {\n  ...currentPrefs,\n  ...updatedPrefs\n};\n\nreturn [{ json: mergedPrefs }];"
+      },
+      "name": "Merge Preferences",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "filePath": "/data/preferences.json",
+        "options": {
+          "encoding": "utf8"
+        }
+      },
+      "name": "Write Preferences",
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prefs = $input.first().json;\nconst changes = [];\n\nconst current = $(''Parse Preferences'').first().json;\n\nif (prefs.core_interests && JSON.stringify(prefs.core_interests) !== JSON.stringify(current.core_interests)) {\n  const added = prefs.core_interests.filter(i => !current.core_interests.includes(i));\n  const removed = current.core_interests.filter(i => !prefs.core_interests.includes(i));\n  if (added.length) changes.push(`Added ${added.map(a => `\"${a}\"`).join(', ')} to core interests`);\n  if (removed.length) changes.push(`Removed ${removed.map(r => `\"${r}\"`).join(', ')} from core interests`);\n}\n\nif (prefs.excluded_keywords && JSON.stringify(prefs.excluded_keywords) !== JSON.stringify(current.excluded_keywords)) {\n  const added = prefs.excluded_keywords.filter(k => !current.excluded_keywords.includes(k));\n  const removed = current.excluded_keywords.filter(k => !prefs.excluded_keywords.includes(k));\n  if (added.length) changes.push(`Added ${added.map(a => `\"${a}\"`).join(', ')} to exclusions`);\n  if (removed.length) changes.push(`Removed ${removed.map(r => `\"${r}\"`).join(', ')} from exclusions`);\n}\n\nif (prefs.contextual_notes && prefs.contextual_notes !== current.contextual_notes) {\n  changes.push(`Updated contextual notes`);\n}\n\nconst summary = changes.length > 0 ? changes.join('. ') + '.' : 'No changes detected.';\n\nreturn [{ json: { summary } }];"
+      },
+      "name": "Build Confirmation",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.summary }}",
+        "options": {
+          "parseMode": "Markdown"
+        }
+      },
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.telegramSendMessage",
+      "typeVersion": 1,
+      "position": [1600, 300]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [{
+          "node": "Read Preferences",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Read Preferences": {
+      "main": [
+        [{
+          "node": "Parse Preferences",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Parse Preferences": {
+      "main": [
+        [{
+          "node": "Gemini Feedback Parser",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Gemini Feedback Parser": {
+      "main": [
+        [{
+          "node": "Merge Preferences",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Merge Preferences": {
+      "main": [
+        [{
+          "node": "Write Preferences",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Write Preferences": {
+      "main": [
+        [{
+          "node": "Build Confirmation",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Build Confirmation": {
+      "main": [
+        [{
+          "node": "Send Confirmation",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    }
+  }
+}

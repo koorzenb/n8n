@@ -1,0 +1,237 @@
+{
+  "name": "Daily Digest Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "cron": "0 7 * * *",
+        "timezone": "America/Halifax"
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.trigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/data/preferences.json"
+      },
+      "name": "Read Preferences",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://openai.com/news/rss.xml"
+      },
+      "name": "RSS OpenAI",
+      "type": "n8n-nodes-base.rss",
+      "typeVersion": 1,
+      "position": [
+        400,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://deepmind.google/blog/feed/basic/"
+      },
+      "name": "RSS DeepMind",
+      "type": "n8n-nodes-base.rss",
+      "typeVersion": 1,
+      "position": [
+        400,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://huggingface.co/blog/feed.xml"
+      },
+      "name": "RSS HuggingFace",
+      "type": "n8n-nodes-base.rss",
+      "typeVersion": 1,
+      "position": [
+        400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/category/artificial-intelligence/feed/"
+      },
+      "name": "RSS TechCrunch",
+      "type": "n8n-nodes-base.rss",
+      "typeVersion": 1,
+      "position": [
+        400,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://export.arxiv.org/rss/cs.AI"
+      },
+      "name": "RSS ArXiv",
+      "type": "n8n-nodes-base.rss",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "merge",
+        "mergeBy": "position"
+      },
+      "name": "Merge RSS",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "position": [
+        600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $json.apiKey }}",
+        "bodyParametersJson": "{\"contents\": [ {\"text\": \"Here are the latest AI news items:\\n\\n{{ $json.rssItems }}\\nPreferences: {{ $json.preferences }}\\n{{ $json.systemPrompt }}\" } ] }",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "method": "POST"
+      },
+      "name": "Gemini Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        800,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "{{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "message": "{{ $json.response.content }}",
+        "parseMode": "Markdown"
+      },
+      "name": "Send Telegram",
+      "type": "n8n-nodes-base.telegramSendMessage",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        {
+          "node": "Read Preferences",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Read Preferences": {
+      "main": [
+        {
+          "node": "RSS OpenAI",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "RSS DeepMind",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "RSS HuggingFace",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "RSS TechCrunch",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "RSS ArXiv",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "RSS OpenAI": {
+      "main": [
+        {
+          "node": "Merge RSS",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "RSS DeepMind": {
+      "main": [
+        {
+          "node": "Merge RSS",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "RSS HuggingFace": {
+      "main": [
+        {
+          "node": "Merge RSS",
+          "type": "main",
+          "index": 1
+        }
+      ]
+    },
+    "RSS TechCrunch": {
+      "main": [
+        {
+          "node": "Merge RSS",
+          "type": "main",
+          "index": 2
+        }
+      ]
+    },
+    "RSS ArXiv": {
+      "main": [
+        {
+          "node": "Merge RSS",
+          "type": "main",
+          "index": 3
+        }
+      ]
+    },
+    "Merge RSS": {
+      "main": [
+        {
+          "node": "Gemini Digest",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "Gemini Digest": {
+      "main": [
+        {
+          "node": "Send Telegram",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    }
+  }
+}

@@ -1,6 +1,7 @@
 # Step-by-Step Import Guide for n8n Workflows
 
 ## Prerequisites
+
 1. **n8n Installation**
    - Running n8n via Docker (recommended) or via npm (`npm install -g n8n`)
    - Confirm access at `http://localhost:5678` (or your configured port)
@@ -14,55 +15,59 @@
    - **Telegram Bot Token** (under *Credentials ? Telegram*)
    - **Telegram Chat ID** (store as environment variable `TELEGRAM_CHAT_ID`)
 
----
+***
 
 ## Importing Workflows
 
 ### Workflow 1: Daily Digest Generator
+
 1. Navigate to **Workflows ? Import** in the n8n UI
 2. Upload `workflows/01_digest.json`
 3. Click **Import** ? Workflow will appear as **`Daily Digest Generator`**
 
 ### Workflow 2: Telegram Feedback Listener
+
 1. Navigate to **Workflows ? Import**
 2. Upload `workflows/02_feedback.json`
 3. Click **Import** ? Workflow will appear as **`Telegram Feedback Listener`**
 
----
+***
 
 ## Post-Import Configuration
 
 | Step | Action |
-|------|--------|
+| ------ | -------- |
 | 1?? | In **Workflow 1**, click the **??** (Credentials) icon next to **`Schedule Trigger`** ? Set timezone if needed |
 | 2?? | In **Workflow 2**, do the same for the **Telegram Trigger** node |
-| 3?? | Open **`01_digest.json`** in the editor ? Verify these fields:
-   - Replace `{{ $json.apiKey }}` with your Google AI Studio key
-   - Replace `{{ $json.chatId }}` with your Telegram Chat ID
-   *(Use the "Credentials" dropdown to insert secure values)* |
-| 4?? | Save both workflows **after** adding credentials |
-| 5?? | Test Workflow 1 manually:
-   - Click **Execute Workflow** ? Confirm 5-item digest appears in Telegram |
+| 3?? | Open **`01_digest.json`** in the editor ? Verify these fields: |
 
----
+|  |- Replace `{{ $json.apiKey }}` with your Google AI Studio key |
+| |- Replace `{{ $json.chatId }}` with your Telegram Chat ID |
+| |   *(Use the "Credentials" dropdown to insert secure values)* |
+| 4?? | Save both workflows **after** adding credentials |
+| 5?? | Test Workflow 1 manually: - Click **Execute Workflow** ? Confirm 5-item digest appears in Telegram |
+***
 
 ## Validation Checklist
 
 ? **Workflow 1**
+
 - [ ] Fetches 5 RSS feeds at 07:00 AM daily
 - [ ] Generates exactly 5 bullet points (4 interest-matched + 1 wildcard)
 - [ ] Wildcard item prefixes with `?? **Wildcard:**`
 
 ? **Workflow 2**
+
 - [ ] Receives Telegram messages ? Parses preferences.json
 - [ ] Updates preferences.json on disk
 - [ ] Sends confirmation message with changed fields
 
 ? **Preferences File**
+
 - [ ] Persists in `/data/preferences.json`
 - [ ] Auto-updated by Workflow 2
 
----
+***
 
 ## Common Gotchas
 

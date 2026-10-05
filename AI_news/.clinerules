@@ -1,15 +1,18 @@
 # .clinerules - Basic Rules for Agentic Development
 
 ## 1. Code Quality
+
 - **Formatting**: Code must be formatted with the project's default formatter before committing.
 - **Type Safety**: Prefer static typing (e.g., TypeScript) over plain JavaScript where possible.
 
 ## 3. Commit Messages
+
 - **Conventional Commits**: Use the format `type(scope): description` (e.g., `feat(auth): add OAuth2 login`).
 - **Scope**: Include a scope that indicates the affected module or feature.
 - **Body**: Provide a concise rationale and any breaking changes in the body.
 
 ## 5. Documentation
+
 - **README Updates**: Keep the root README up‑to‑date with new features and usage instructions.
 - **API Docs**: If new public APIs are added, update the relevant documentation files.
 - **Comments**: Add meaningful comments for complex logic; avoid redundant comments.

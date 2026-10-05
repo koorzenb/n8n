@@ -147,6 +147,12 @@ app.post('/reminder', (req, res) => {
   }
 
   const notification = alexa.createNotificationObject(DEVICE_NAME, 'Reminder', title, reminderTime.getTime(), 'ON', null);
+  if (!notification) {
+    return res.status(400).json({
+      error: 'Could not create Alexa reminder notification',
+      details: 'Check that ALEXA_DEVICE_NAME matches an online Alexa device and that scheduledTime is valid.',
+    });
+  }
   if (timeZone) notification.timeZoneId = timeZone;
   if (profileCustomerId) notification.personId = profileCustomerId;
 
